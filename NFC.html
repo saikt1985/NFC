@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Business Card NFC</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f3f4f6;
+            min-height: 100vh;
+            margin: 0;
+            padding: 0;
+        }
+        #home-screen, #details-screen {
+            display: none;
+            padding: 1rem;
+        }
+        #home-screen.active, #details-screen.active {
+            display: block;
+        }
+        /* Fallback styling if Tailwind fails */
+        button {
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+            font-size: 1rem;
+        }
+        .container {
+            max-width: 20rem; /* 320px for mobile */
+            margin: 0 auto;
+        }
+        .card {
+            background: white;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 1rem;
+        }
+        /* Enhanced share button styling */
+        .share-btn {
+            padding: 0.5rem 1.5rem;
+            border-radius: 9999px; /* Fully rounded */
+            background-color: #2563eb; /* Blue-600 */
+            color: white;
+            font-weight: 500;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            transition: background-color 0.2s, box-shadow 0.2s, transform 0.1s;
+        }
+        .share-btn:hover {
+            background-color: #1d4ed8; /* Blue-700 */
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        .share-btn:active {
+            transform: scale(0.95);
+        }
+        /* Fallback message */
+        #fallback-message {
+            text-align: center;
+            color: #4b5563;
+            padding: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Fallback Message -->
+    <div id="fallback-message">Loading app...</div>
+
+    <!-- Home Screen -->
+    <div id="home-screen" class="active">
+        <div class="container">
+            <h1 class="text-xl font-bold mb-4 text-gray-800 text-center sm:text-2xl">Business Card NFC</h1>
+            <div class="card flex justify-between items-center">
+                <button id="contact1-label" onclick="showDetails(1)" class="text-base text-blue-600 hover:underline sm:text-lg">Contact 1</button>
+                <button onclick="shareContact(1)" class="share-btn text-sm sm:text-base">Share</button>
+            </div>
+            <div class="card flex justify-between items-center">
+                <button id="contact2-label" onclick="showDetails(2)" class="text-base text-blue-600 hover:underline sm:text-lg">Contact 2</button>
+                <button onclick="shareContact(2)" class="share-btn text-sm sm:text-base">Share</button>
+            </div>
+            <p id="status" class="text-sm text-gray-600 text-center mt-4">Ready to share contacts</p>
+        </div>
+    </div>
+
+    <!-- Details Screen -->
+    <div id="details-screen">
+        <div class="container">
+            <h2 id="details-title" class="text-lg font-bold mb-4 text-gray-800 text-center sm:text-xl">Edit Contact</h2>
+            <div class="card">
+                <div class="mb-3">
+                    <label for="name" class="block text-sm text-gray-700">Name *</label>
+                    <input type="text" id="name" class="mt-1 text-sm" placeholder="Enter full name" required>
+                </div>
+                <div class="mb-3">
+                    <label for="email" class="block text-sm text-gray-700">Email</label>
+                    <input type="email" id="email" class="mt-1 text-sm" placeholder="Enter email">
+                </div>
+                <div class="mb-3">
+                    <label for="phone" class="block text-sm text-gray-700">Phone Number</label>
+                    <input type="tel" id="phone" class="mt-1 text-sm" placeholder="Enter phone number">
+                </div>
+                <div class="mb-3">
+                    <label for="address" class="block text-sm text-gray-700">Address</label>
+                    <textarea id="address" class="mt-1 text-sm" placeholder="Enter address" rows="3"></textarea>
+                </div>
+                <div class="mb-3">
+                    <label for="company" class="block text-sm text-gray-700">Company Name</label>
+                    <input type="text" id="company" class="mt-1 text-sm" placeholder="Enter company name">
+                </div>
+                <div class="flex space-x-2">
+                    <button onclick="saveContact()" class="bg-green-500 text-white text-sm hover:bg-green-600 px-3 py-2 rounded-lg">Save</button>
+                    <button onclick="showHome()" class="bg-gray-500 text-white text-sm hover:bg-gray-600 px-3 py-2 rounded-lg">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        console.log('App script loaded');
+        let currentContactIndex = 1;
+
+        // Load saved contacts and update labels on page load
+        window.onload = function() {
+            document.getElementById('fallback-message').style.display = 'none';
+            updateContactLabels();
+            loadContact(1);
+            loadContact(2);
+        };
+
+        // Update contact labels with company names
+        function updateContactLabels() {
+            const contact1 = JSON.parse(localStorage.getItem('contact1')) || {};
+            const contact2 = JSON.parse(localStorage.getItem('contact2')) || {};
+            document.getElementById('contact1-label').textContent = contact1.company ? contact1.company : 'Contact 1';
+            document.getElementById('contact2-label').textContent = contact2.company ? contact2.company : 'Contact 2';
+        }
+
+        // Show details screen
+        function showDetails(index) {
+            currentContactIndex = index;
+            document.getElementById('details-title').textContent = `Edit Contact ${index}`;
+            document.getElementById('home-screen').classList.remove('active');
+            document.getElementById('details-screen').classList.add('active');
+            loadContact(index);
+            document.getElementById('status').textContent = 'Ready to share contacts';
+        }
+
+        // Show home screen
+        function showHome() {
+            document.getElementById('details-screen').classList.remove('active');
+            document.getElementById('home-screen').classList.add('active');
+            document.getElementById('status').textContent = 'Ready to share contacts';
+            updateContactLabels();
+        }
+
+        // Save contact to localStorage
+        function saveContact() {
+            const name = document.getElementById('name').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const phone = document.getElementById('phone').value.trim();
+            const address = document.getElementById('address').value.trim();
+            const company = document.getElementById('company').value.trim();
+
+            if (!name) {
+                document.getElementById('status').textContent = 'Name is required!';
+                return;
+            }
+
+            const contact = { name, email, phone, address, company };
+            localStorage.setItem(`contact${currentContactIndex}`, JSON.stringify(contact));
+            document.getElementById('status').textContent = `Contact ${currentContactIndex} saved successfully!`;
+            showHome();
+        }
+
+        // Load contact from localStorage
+        function loadContact(index) {
+            const contact = JSON.parse(localStorage.getItem(`contact${index}`)) || {};
+            if (currentContactIndex === index) {
+                document.getElementById('name').value = contact.name || '';
+                document.getElementById('email').value = contact.email || '';
+                document.getElementById('phone').value = contact.phone || '';
+                document.getElementById('address').value = contact.address || '';
+                document.getElementById('company').value = contact.company || '';
+            }
+        }
+
+        // Share contact via NFC
+        async function shareContact(index) {
+            try {
+                if (!('NDEFReader' in window)) {
+                    document.getElementById('status').textContent = 'Web NFC is not supported on this device.';
+                    return;
+                }
+
+                const contact = JSON.parse(localStorage.getItem(`contact${index}`)) || {};
+                if (!contact.name) {
+                    document.getElementById('status').textContent = `No data saved for Contact ${index}!`;
+                    return;
+                }
+
+                const vCard = `BEGIN:VCARD
+VERSION:3.0
+VERSION:3.0
+FN:${contact.name}
+${contact.email ? `EMAIL:${contact.email}` : ''}
+${contact.phone ? `TEL:${contact.phone}` : ''}
+${contact.address ? `ADR:${contact.address.replace(/\n/g, '\\n')}` : ''}
+${contact.company ? `ORG:${contact.company}` : ''}
+END:VCARD`;
+
+                const ndef = new NDEFReader();
+                await ndef.write({
+                    records: [{ recordType: "text", data: vCard }]
+                });
+
+                document.getElementById('status').textContent = `Contact ${index} shared successfully via NFC!`;
+            } catch (error) {
+                document.getElementById('status').textContent = `Error: ${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html>
